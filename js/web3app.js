@@ -104,53 +104,112 @@ var app = (function ($) {
             //console.log(`[web3app][connectWalletClick] Chain Data:`, _chainData);
 
             if (nChainId != _settings.chainId) {
+    
+                let isError = true;
+                let result = null;
 
-                await Swal.fire({
-                    icon: 'error',
-                    title: 'Warning: Wrong Network!',
-                    text: `You choose the wrong network, please connect to ${_settings.networkName} chain.`,
-                    customClass: {
-                        confirmButton: 'custom-btn',
-                    },
-                });
-    
                 if(_provider.isMetaMask){
-                       try{
-                            await _provider.request({
-                        method: 'wallet_switchEthereumChain',
-                        params: [{chainId: '0x'+_settings.chainId.toString(16)}],
+                        try {
+                            console.log(`[web3app][connectWalletClick] Trigger metamask to switch chain.`);
+                            result = await _provider.request({
+                                method: 'wallet_switchEthereumChain',
+                                params: [{chainId: '0x'+_settings.chainId.toString(16)}],
                             });
-                            window.location.reload();
-                       }catch(err){
-                           try{
-                                await provider.request({
-                            method: 'wallet_addEthereumChain',
-                                    params: [{chainName:_settings.networkName, chainId: '0x'+_settings.chainId.toString(16),
-                                rpcUrls: [_settings.rpcUrl]}],
-                                });
-                                window.location.reload();
-                            }catch(err){
-                            Swal.fire({
-                                icon: 'error',
-                                text: `Something went wrong, please refresh the page`,
-                                customClass: {
-                                    confirmButton: 'custom-btn',
-                                },
-                            });
+
+                            if (result != null) {
+                                Swal.fire({
+                                    icon: 'error',
+                                    text: `Something went wrong, please refresh the page`,
+                                    customClass: {
+                                        confirmButton: 'custom-btn',
+                                    },
+                                });                                
+                            } else {
+                                isError = false;
                             }
-                       }
+                            
+                        } catch (err) {
+
+                            if (err.code == 4902) {
+                                console.log(`[web3app][connectWalletClick] Adding chain to metamask.`);
+
+                                try{
+                                    result = await _provider.request({
+                                        method: 'wallet_addEthereumChain',
+                                        params: [
+                                            {
+                                                chainName:_settings.networkName, 
+                                                chainId: '0x'+_settings.chainId.toString(16),
+                                                rpcUrls: [_settings.rpcUrl],
+                                                blockExplorerUrls: [_settings.blockExplorerPath],
+                                                nativeCurrency: {
+                                                    name: _settings.chainCurrency,
+                                                    symbol: _settings.chainCurrency,
+                                                    decimals: 18
+                                                }
+                                            }
+                                        ],
+                                    });
+                                    
+                                    if (result != null) {
+                                        Swal.fire({
+                                            icon: 'error',
+                                            text: `Something went wrong, please refresh the page`,
+                                            customClass: {
+                                                confirmButton: 'custom-btn',
+                                            },
+                                        });                                
+                                    } else {
+                                        isError = false;
+                                    }
+        
+
+                                } catch (err) {
+                                    Swal.fire({
+                                        icon: 'error',
+                                        text: err.message,
+                                        customClass: {
+                                            confirmButton: 'custom-btn',
+                                        },
+                                    });
+                                }
+
+                            } else {
+                                Swal.fire({
+                                    icon: 'error',
+                                    text: err.message,
+                                    customClass: {
+                                        confirmButton: 'custom-btn',
+                                    },
+                                });
+
+                            }
+                        }
+
+                } else {
+                    await Swal.fire({
+                        icon: 'error',
+                        title: 'Warning: Wrong Network!',
+                        text: `You choose the wrong network, please connect to ${_settings.networkName} chain.`,
+                        customClass: {
+                            confirmButton: 'custom-btn',
+                        },
+                    });
+    
                 }
     
-                if (_provider.close) {
-                    console.log(`[web3app][connectWalletClick] Close provider.`);
-                    await _provider.close();
-                    await web3Modal.clearCacheProvider();
-                    _provider = null;
+                if (isError) {
+                    if (_provider.close) {
+                        console.log(`[web3app][connectWalletClick] Close provider.`);
+                        await _provider.close();
+                        await web3Modal.clearCacheProvider();
+                        _provider = null;
+                    }
+                    _selectedAccount = null;
+                    walletConnectionStatus = false;
+                    $("#connect-wallet").html("Connect Wallet");
+                    return false;
                 }
-                _selectedAccount = null;
-                walletConnectionStatus = false;
-                //reload here?
-                return false;
             }
 
             let aAccounts = await _web3.eth.getAccounts();
@@ -174,6 +233,7 @@ var app = (function ($) {
                 }
                 _selectedAccount = null;
                 walletConnectionStatus = false;
+                $("#connect-wallet").html("Connect Wallet");
                 return false;
 
             }
@@ -185,7 +245,7 @@ var app = (function ($) {
             walletConnectionStatus = true;
 
             let sShortAccountAddress = _selectedAccount.substring(0,6) + "..." + _selectedAccount.substring(38,42);
-            $(".connect-wallet-text").html(sShortAccountAddress);
+            $("#connect-wallet").html(sShortAccountAddress);
 
             var web3InitComplete = new Event('web3InitComplete');
             document.dispatchEvent(web3InitComplete);
@@ -202,7 +262,7 @@ var app = (function ($) {
         console.log(`[web3app][accountsChanged] accounts:`, accounts);
         _selectedAccount = accounts[0];
         let sShortAccountAddress = _selectedAccount.substring(0,6) + "..." + _selectedAccount.substring(38,42);
-        $(".connect-wallet-text").html(sShortAccountAddress);
+        $(".connect-wallet").html(sShortAccountAddress);
         window.location.reload();
     }
 
@@ -220,33 +280,7 @@ var app = (function ($) {
                         confirmButton: 'custom-btn',
                     },
                 });
-    
-                if(_provider.isMetaMask){
-                       try{
-                            await _provider.request({
-                        method: 'wallet_switchEthereumChain',
-                        params: [{chainId: '0x'+_settings.chainId.toString(16)}],
-                            });
-                            window.location.reload();
-                       }catch(err){
-                           try{
-                                await provider.request({
-                            method: 'wallet_addEthereumChain',
-                                    params: [{chainName:_settings.networkName, chainId: '0x'+_settings.chainId.toString(16),
-                                rpcUrls: [_settings.rpcUrl]}],
-                                });
-                                window.location.reload();
-                            }catch(err){
-                            Swal.fire({
-                                icon: 'error',
-                                text: `Something went wrong, please refresh the page`,
-                                customClass: {
-                                    confirmButton: 'custom-btn',
-                                    },
-                                });
-                            }
-                       }
-                }
+
                 if (_provider.close) {
                     console.log(`[web3app][chainChanged] Close provider.`);
                     await _provider.close();
@@ -255,7 +289,7 @@ var app = (function ($) {
                 }
                 _selectedAccount = null;
                 walletConnectionStatus = false;
-                $(".connect-wallet-text").html("Wallet Connect");
+                $("#connect-wallet").html("Connect Wallet");
                 return;
             }
             
@@ -270,7 +304,7 @@ var app = (function ($) {
             walletConnectionStatus = true;
     
             let sShortAccountAddress = _selectedAccount.substring(0,6) + "..." + _selectedAccount.substring(38,42);
-            $(".connect-wallet-text").html(sShortAccountAddress);
+            $("#connect-wallet").html(sShortAccountAddress);
         }
     }
 
@@ -304,7 +338,7 @@ var app = (function ($) {
                 await web3Modal.clearCacheProvider();
                 _provider = null;
             }
-            $(".connect-wallet-text").html("Wallet Connect");
+            $("#connect-wallet").html("Connect Wallet");
             _selectedAccount = null;
 
             if (_provider.removeListener) {
