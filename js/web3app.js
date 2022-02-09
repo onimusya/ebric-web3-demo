@@ -247,9 +247,9 @@ var app = (function ($) {
             let sShortAccountAddress = _selectedAccount.substring(0,6) + "..." + _selectedAccount.substring(38,42);
             $("#connect-wallet").html(sShortAccountAddress);
 
-            var web3InitComplete = new Event('web3InitComplete');
-            document.dispatchEvent(web3InitComplete);
-            console.log('[web3app][connectWalletClick] dispatched web3InitComplete');
+            var web3EventWalletConnected = new Event('web3EventWalletConnected');
+            document.dispatchEvent(web3EventWalletConnected);
+            console.log('[web3app][connectWalletClick] dispatched web3EventWalletConnected');
 
             return true;
 
@@ -290,6 +290,9 @@ var app = (function ($) {
                 _selectedAccount = null;
                 walletConnectionStatus = false;
                 $("#connect-wallet").html("Connect Wallet");
+                var web3EventWalletDisconnected = new Event('web3EventWalletDisconnected');
+                document.dispatchEvent(web3EventWalletDisconnected);
+    
                 return;
             }
             
@@ -316,12 +319,10 @@ var app = (function ($) {
             let result = await connectWallet();
 
             if(!result){
-                var web3InitFailed = new Event('web3InitFailed');
-                document.dispatchEvent(web3InitFailed);
-                console.log('[web3app][connectWalletClick] dispatched web3InitFailed');
-            }
-
-            if (result) {
+                var web3EventWalletConnectError = new Event('web3EventWalletConnectError');
+                document.dispatchEvent(web3EventWalletConnectError);
+                console.log('[web3app][connectWalletClick] dispatched web3EventWalletConnectError');
+            } else {
                 console.log(`[web3app][connectWalletClick] Success connect wallet and set status to cookie.`);
                 createCookie("wallet_connection_status", "1");
             }
@@ -347,8 +348,8 @@ var app = (function ($) {
                 _provider.removeListener("chainChanged", chainChanged);    
             }
 
-            var web3WalletDisconnect = new Event('web3WalletDisconnect');
-            document.dispatchEvent(web3WalletDisconnect);
+            var web3EventWalletDisconnected = new Event('web3EventWalletDisconnected');
+            document.dispatchEvent(web3EventWalletDisconnected);
 
         }
     }
@@ -397,9 +398,9 @@ var app = (function ($) {
                     console.log("[web3app][init] Connect wallet result:", result);
                     if (!result) {
                         createCookie("wallet_connection_status", "");
-                        var web3InitFailed = new Event('web3InitFailed');
-                        document.dispatchEvent(web3InitFailed);
-                        console.log('[web3app][init] dispatched web3InitFailed');
+                        var web3EventWalletConnectError = new Event('web3EventWalletConnectError');
+                        document.dispatchEvent(web3EventWalletConnectError);        
+                        console.log('[web3app][init] dispatched web3EventWalletConnectError');
                     }
                 });
             }
