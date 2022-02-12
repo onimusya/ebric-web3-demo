@@ -429,6 +429,31 @@ var app = (function ($) {
 
         connectWallet: function () {
             connectWalletClick();
+        },
+
+        personalSign: async function(message, from) {
+            let method = "personal_sign";
+            
+            if (!walletConnectionStatus) {
+                return false;
+            }
+
+            let result = await _provider.request(
+                {
+                    method: method,
+                    params: [
+                        message, 
+                        from
+                    ]
+                }
+            )
+
+            return result;
+
+        },
+
+        recoverSign: function (message, signature) {
+            return _web3.eth.accounts.recover(message, signature);
         }
 
     }
